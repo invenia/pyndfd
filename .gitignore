@@ -3,3 +3,7 @@ dist
 build
 *.pyc
 *.swp
+env*
+.python-version
+*.egg-info/
+
