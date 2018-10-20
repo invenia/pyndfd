@@ -6,4 +6,5 @@ build
 env*
 .python-version
 *.egg-info/
-
+.tox/
+.coverage

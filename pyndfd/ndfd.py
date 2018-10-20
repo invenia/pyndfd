@@ -41,15 +41,15 @@ from os import makedirs, path
 from shutil import rmtree
 from sys import stderr
 from tempfile import gettempdir
-from six.moves.urllib.request import urlretrieve
 
 import pygrib
-from ncepgrib2 import Grib2Decode as ncepgrib
-from numpy.ma.core import MaskedConstant as NAN
+from ncepgrib2 import Grib2Decode
+from numpy.ma.core import MaskedConstant as NaN
 from pyproj import Geod, Proj
+from six.moves.urllib.request import urlretrieve
 
-from .ndfd_defs import ndfdDefs
-
+from pyndfd.ndfd_defs import ndfd_defs
+from pyndfd.utils import deprecate_func
 
 #############
 #           #
@@ -57,7 +57,7 @@ from .ndfd_defs import ndfdDefs
 #           #
 #############
 
-DEFS = ndfdDefs()
+DEFS = ndfd_defs()
 G = Geod(ellps="clrk66")
 
 CACHE_SERVER_BUFFER_MIN = 20
@@ -77,7 +77,7 @@ NDFD_TMP = gettempdir() + path.sep + str(getuser()) + "_pyndfd" + path.sep
 
 """
 
-  Function: setLocalCacheServer
+  Function: set_local_cache_server
   Purpose: Set a server to use instead of weather.noaa.gov
   Params:
     uri: String denoting the server URI to use
@@ -85,14 +85,16 @@ NDFD_TMP = gettempdir() + path.sep + str(getuser()) + "_pyndfd" + path.sep
 """
 
 
-def setLocalCacheServer(uri):
+def set_local_cache_server(uri):
     global NDFD_LOCAL_SERVER
     NDFD_LOCAL_SERVER = uri
 
 
+setLocalCacheServer = deprecate_func("setLocalCacheServer", set_local_cache_server)
+
 """
 
-  Function: stdDev
+  Function: std_dev
   Purpose: Calculate the standard deviation of a list of float values
   Params:
  vals: List of float values to use in calculation
@@ -100,7 +102,7 @@ def setLocalCacheServer(uri):
 """
 
 
-def stdDev(vals):
+def std_dev(vals):
     mean = sum(vals) / len(vals)
     squared = []
     for val in vals:
@@ -108,6 +110,8 @@ def stdDev(vals):
     variance = sum(squared) / len(squared)
     return sqrt(variance)
 
+
+stdDev = deprecate_func("stdDev", std_dev)
 
 """
 
@@ -120,34 +124,38 @@ def stdDev(vals):
 
 
 def median(vals):
-    sortedLst = sorted(vals)
-    lstLen = len(vals)
-    index = (lstLen - 1) // 2
-    if lstLen % 2:
-        return sortedLst[index]
+    sorted_list = sorted(vals)
+    list_length = len(vals)
+    index = (list_length - 1) // 2
+    if list_length % 2:
+        return sorted_list[index]
     else:
-        return (sortedLst[index] + sortedLst[index + 1]) / 2.0
+        return (sorted_list[index] + sorted_list[index + 1]) / 2.0
 
 
 """
 
-  Function:  getLatestForecastTime
+  Function:  get_latest_forecast_time
   Purpose:   For caching purposes, compare this time to cached time to see if
   the cached variable needs to be updated
 
 """
 
 
-def getLatestForecastTime():
-    latestTime = datetime.utcnow()
-    if latestTime.minute <= CACHE_SERVER_BUFFER_MIN:
-        latestTime = datetime.utcnow() - timedelta(hours=1)
-    return latestTime.replace(minute=0, second=0, microsecond=0)
+def get_latest_forecast_time():
+    latest_time = datetime.utcnow()
+    if latest_time.minute <= CACHE_SERVER_BUFFER_MIN:
+        latest_time = datetime.utcnow() - timedelta(hours=1)
+    return latest_time.replace(minute=0, second=0, microsecond=0)
 
+
+getLatesdtForecastTime = deprecate_func(
+    "getLatestForecastTime", get_latest_forecast_time
+)
 
 """
 
-  Function: getVariable
+  Function: get_variable
   Purpose: Cache the requested variable if not already cached and return
   the paths of the cached files
   Params:
@@ -157,46 +165,48 @@ def getLatestForecastTime():
 """
 
 
-def getVariable(var, area):
+def get_variable(var, area):
     gribs = []
-    dirTime = NDFD_TMP + getLatestForecastTime().strftime("%Y-%m-%d-%H") + path.sep
-    if not path.isdir(dirTime):
+    dir_time = NDFD_TMP + get_latest_forecast_time().strftime("%Y-%m-%d-%H") + path.sep
+    if not path.isdir(dir_time):
         try:
             rmtree(NDFD_TMP)
         except Exception:
             pass
-        makedirs(dirTime)
+        makedirs(dir_time)
     if area in DEFS["vars"]:
         for vp in DEFS["vars"][area]:
             if var in DEFS["vars"][area][vp]:
-                varDir = NDFD_DIR.format(area, vp)
-                varName = varDir + NDFD_VAR.format(var)
-                localDir = dirTime + varDir
-                localVar = dirTime + varName
-                if not path.isdir(localDir):
-                    makedirs(localDir)
-                if not path.isfile(localVar):
+                var_dir = NDFD_DIR.format(area, vp)
+                var_name = var_dir + NDFD_VAR.format(var)
+                local_dir = dir_time + var_dir
+                local_var = dir_time + var_name
+                if not path.isdir(local_dir):
+                    makedirs(local_dir)
+                if not path.isfile(local_var):
                     if NDFD_LOCAL_SERVER is not None:
-                        remoteVar = NDFD_LOCAL_SERVER + varName
-                        urlretrieve(remoteVar, localVar)
+                        remote_var = NDFD_LOCAL_SERVER + var_name
+                        urlretrieve(remote_var, local_var)
                     else:
-                        remoteVar = NDFD_REMOTE_SERVER + varName
-                        urlretrieve(remoteVar, localVar)
-                if not path.isfile(localVar):
+                        remote_var = NDFD_REMOTE_SERVER + var_name
+                        urlretrieve(remote_var, local_var)
+                if not path.isfile(local_var):
                     raise RuntimeError(
                         "Cannot retrieve NDFD variables at this time. "
                         "Try again in a moment."
                     )
-                gribs.append(localVar)
+                gribs.append(local_var)
     else:
         raise ValueError("Invalid Area: " + str(area))
 
     return gribs
 
 
+getVariable = deprecate_func("getVariable", get_variable)
+
 """
 
-  Function: getElevationVariable
+  Function: get_elevation_variable
   Purpose: Cache the static elevation variable if not already cached and return
   the path of the cached file
   Params:
@@ -211,7 +221,7 @@ def getVariable(var, area):
 """
 
 
-def getElevationVariable(area):
+def get_elevation_variable(area):
     if area == "puertori":
         raise ValueError(
             "Elevation currently not available for Puerto Rico. Set elev=False"
@@ -219,27 +229,29 @@ def getElevationVariable(area):
     if NDFD_LOCAL_SERVER is None:
         raise RuntimeError(
             "Local cache server must provide elevation data. "
-            "Specify cache server with ndfd.setLocalCacheServer(uri)"
+            "Specify cache server with ndfd.set_local_cache_server(uri)"
         )
     if not path.isdir(NDFD_TMP):
         makedirs(NDFD_TMP)
-    remoteVar = NDFD_LOCAL_SERVER + NDFD_STATIC.format(area) + NDFD_VAR.format("elev")
-    localDir = NDFD_TMP + NDFD_STATIC.format(area)
-    localVar = localDir + NDFD_VAR.format("elev")
-    if not path.isdir(localDir):
-        makedirs(localDir)
-    if not path.isfile(localVar):
-        urlretrieve(remoteVar, localVar)
-    if not path.isfile(localVar):
+    remote_var = NDFD_LOCAL_SERVER + NDFD_STATIC.format(area) + NDFD_VAR.format("elev")
+    local_dir = NDFD_TMP + NDFD_STATIC.format(area)
+    local_var = local_dir + NDFD_VAR.format("elev")
+    if not path.isdir(local_dir):
+        makedirs(local_dir)
+    if not path.isfile(local_var):
+        urlretrieve(remote_var, local_var)
+    if not path.isfile(local_var):
         raise RuntimeError(
             "Cannot retrieve NDFD variables at this time. Try again in a moment."
         )
-    return localVar
+    return local_var
 
+
+getElevationVariable = deprecate_func("getElevationVariable", get_elevation_variable)
 
 """
 
-  Function: getSmallestGrid
+  Function: get_smallest_grid
   Purpose: Use the provided lat, lon coordinates to find the smallest
   NDFD area that contains those coordinates. Return the name of the area.
   Params:
@@ -249,29 +261,31 @@ def getElevationVariable(area):
 """
 
 
-def getSmallestGrid(lat, lon):
+def get_smallest_grid(lat, lon):
     smallest = "neast"
-    minDist = G.inv(
+    min_dist = G.inv(
         lon, lat, DEFS["grids"][smallest]["lonC"], DEFS["grids"][smallest]["latC"]
     )
 
     for area in DEFS["grids"].keys():
         if area == "conus" or area == "nhemi" or area == "npacocn":
             continue
-        curArea = DEFS["grids"][area]
+        cur_area = DEFS["grids"][area]
         # NOTE: smallArea is assigned but never used
         # smallArea = DEFS["grids"][smallest]
-        dist = G.inv(lon, lat, curArea["lonC"], curArea["latC"])[-1]
-        if dist < minDist:
-            minDist = dist
+        dist = G.inv(lon, lat, cur_area["lonC"], cur_area["latC"])[-1]
+        if dist < min_dist:
+            min_dist = dist
             smallest = area
 
     return smallest
 
 
+getSmallestGrid = deprecate_func("getSmallestGrid", get_smallest_grid)
+
 """
 
-  Function: getNearestGridPoint
+  Function: get_nearest_grid_point
   Purpose: Find the nearest grid point to the provided coordinates in the supplied
   grib message. Return the indexes to the numpy array as well as the
   lat/lon and grid coordinates of the grid point.
@@ -285,77 +299,81 @@ def getSmallestGrid(lat, lon):
 """
 
 
-def getNearestGridPoint(grb, lat, lon, projparams=None):
+def get_nearest_grid_point(grb, lat, lon, projparams=None):
     if projparams is None:
         p = Proj(grb.projparams)
     else:
         p = Proj(projparams)
-    offsetX, offsetY = p(
+    offset_x, offset_y = p(
         grb["longitudeOfFirstGridPointInDegrees"],
         grb["latitudeOfFirstGridPointInDegrees"],
     )
-    gridX, gridY = p(lon, lat)
+    grid_x, grid_y = p(lon, lat)
     try:
-        x = int(round((gridX - offsetX) / grb["DxInMetres"]))
-        y = int(round((gridY - offsetY) / grb["DyInMetres"]))
-        gLon, gLat = p(
-            x * grb["DxInMetres"] + offsetX,
-            y * grb["DyInMetres"] + offsetY,
+        x = int(round((grid_x - offset_x) / grb["DxInMetres"]))
+        y = int(round((grid_y - offset_y) / grb["DyInMetres"]))
+        g_lon, g_lat = p(
+            x * grb["DxInMetres"] + offset_x,
+            y * grb["DyInMetres"] + offset_y,
             inverse=True,
         )
     except Exception:
-        x = int(round((gridX - offsetX) / grb["DiInMetres"]))
-        y = int(round((gridY - offsetY) / grb["DjInMetres"]))
-        gLon, gLat = p(
-            x * grb["DiInMetres"] + offsetX,
-            y * grb["DjInMetres"] + offsetY,
+        x = int(round((grid_x - offset_x) / grb["DiInMetres"]))
+        y = int(round((grid_y - offset_y) / grb["DjInMetres"]))
+        g_lon, g_lat = p(
+            x * grb["DiInMetres"] + offset_x,
+            y * grb["DjInMetres"] + offset_y,
             inverse=True,
         )
-    return x, y, gridX, gridY, gLat, gLon
+    return x, y, grid_x, grid_y, g_lat, g_lon
 
+
+getNearestGridPoint = deprecate_func("getNearestGridPoint", get_nearest_grid_point)
 
 """
 
-  Function: validateArguments
+  Function: validate_arguments
   Purpose: Validate the arguments passed into an analysis function to make sure
   they will work with each other.
   Params:
  var:  The NDFD variable being requested
  area:  The NDFD grid area being requested
- timeStep: The time step to be used in the returned analysis
- minTime: The minimum forecast time to analyze
- maxTime: The maximum forecast time to analyze
+ time_step: The time step to be used in the returned analysis
+ min_time: The minimum forecast time to analyze
+ max_time: The maximum forecast time to analyze
   Notes:
- - maxTime is not currently being evaluated
+ - max_time is not currently being evaluated
 
 """
 
 
-def validateArguments(var, area, timeStep, minTime, maxTime):
-    if timeStep < 1:
-        raise ValueError("timeStep must be >= 1")
+def validate_arguments(var, area, time_step, min_time, max_time):
+    if time_step < 1:
+        raise ValueError("time_step must be >= 1")
 
-    # if minTime != None and minTime < getLatestForecastTime():
-    #    raise ValueError('minTime is before the current forecast time.')
-    # if maxTime > ...
+    # if min_time != None and min_time < get_latest_forecast_time():
+    #    raise ValueError('min_time is before the current forecast time.')
+    # if max_time > ...
 
     try:
-        areaVP = DEFS["vars"][area]
+        area_vp = DEFS["vars"][area]
     except IndexError:
         raise ValueError("Invalid Area.")
 
-    validVar = False
-    for vp in areaVP:
-        if var in areaVP[vp]:
-            validVar = True
+    valid_var = False
+    for vp in area_vp:
+        if var in area_vp[vp]:
+            valid_var = True
             break
-    if not validVar:
+    if not valid_var:
         raise ValueError("Variable not available in area: " + area)
 
 
+validateArguments = deprecate_func("validateArguments", validate_arguments)
+
 """
 
-  Function: getForecastAnalysis
+  Function: get_forecast_analysis
   Purpose: Analyze a grid point for any NDFD forecast variable in any NDFD grid area.
   The grid point will be the closest point to the supplied coordinates.
   Params:
@@ -363,65 +381,65 @@ def validateArguments(var, area, timeStep, minTime, maxTime):
  lat:  Latitude
  lon:  Longitude
  n:  The levels away from the grid point to analyze. Default = 1
- timeStep: The time step in hours to use in analyzing forecasts. Default = 1
+ time_step: The time step in hours to use in analyzing forecasts. Default = 1
  elev:  Boolean that indicates whether to include elevation of the grid points
    Default = False
- minTime: Optional minimum time for the forecast analysis
- maxTime: Optional maximum time for the forecast analysis
+ min_time: Optional minimum time for the forecast analysis
+ max_time: Optional maximum time for the forecast analysis
  area:  Used to specify a specific NDFD grid area. Default is to find the
    smallest grid the supplied coordinates lie in.
 
 """
 
 
-def getForecastAnalysis(
-    var, lat, lon, n=0, timeStep=1, elev=False, minTime=None, maxTime=None, area=None
+def get_forecast_analysis(
+    var, lat, lon, n=0, time_step=1, elev=False, min_time=None, max_time=None, area=None
 ):
     if n < 0:
         raise ValueError("n must be >= 0")
-    negN = n * -1
+    neg_n = n * -1
 
     if area is None:
-        area = getSmallestGrid(lat, lon)
-    validateArguments(var, area, timeStep, minTime, maxTime)
+        area = get_smallest_grid(lat, lon)
+    validate_arguments(var, area, time_step, min_time, max_time)
 
     analysis = {}
     analysis["var"] = var
     analysis["reqLat"] = lat
     analysis["reqLon"] = lon
     analysis["n"] = n
-    analysis["forecastTime"] = getLatestForecastTime()
+    analysis["forecastTime"] = get_latest_forecast_time()
     analysis["forecasts"] = {}
 
-    validTimes = []
-    for hour in range(0, 250, timeStep):
+    valid_times = []
+    for hour in range(0, 250, time_step):
         t = (
-            analysis["forecastTime"] -
-            timedelta(hours=analysis["forecastTime"].hour) +
-            timedelta(hours=hour)
+            analysis["forecastTime"]
+            - timedelta(hours=analysis["forecastTime"].hour)
+            + timedelta(hours=hour)
         )
-        if minTime is not None and t < minTime:
+        if min_time is not None and t < min_time:
             continue
-        if maxTime is not None and t > maxTime:
+        if max_time is not None and t > max_time:
             break
-        validTimes.append(t)
+        valid_times.append(t)
 
-    varGrbs = getVariable(var, area)
-    allVals = []
-    firstRun = True
-    for g in varGrbs:
+    var_grbs = get_variable(var, area)
+    all_vals = []
+    first_run = True
+    for g in var_grbs:
         grbs = pygrib.open(g)
         for grb in grbs:
             t = datetime(
                 grb["year"], grb["month"], grb["day"], grb["hour"]
             ) + timedelta(hours=grb["forecastTime"])
-            if t not in validTimes:
+            if t not in valid_times:
                 continue
 
-            x, y, gridX, gridY, gLat, gLon = getNearestGridPoint(grb, lat, lon)
-            if firstRun:
-                analysis["gridLat"] = gLat
-                analysis["gridLon"] = gLon
+            x, y, grid_x, grid_y, g_lat, g_lon = get_nearest_grid_point(grb, lat, lon)
+            if first_run:
+                analysis["gridLat"] = g_lat
+                analysis["gridLon"] = g_lon
                 analysis["units"] = grb["parameterUnits"]
                 try:
                     analysis["deltaX"] = grb["DxInMetres"]
@@ -429,48 +447,48 @@ def getForecastAnalysis(
                 except Exception:
                     analysis["deltaX"] = grb["DiInMetres"]
                     analysis["deltaY"] = grb["DjInMetres"]
-                analysis["distance"] = G.inv(lon, lat, gLon, gLat)[-1]
-                firstRun = False
+                analysis["distance"] = G.inv(lon, lat, g_lon, g_lat)[-1]
+                first_run = False
 
             vals = []
             if elev:
-                eGrbs = pygrib.open(getElevationVariable(area))
-                e = eGrbs[1]
-                eX, eY, eGridX, eGridY, eLat, eLon = getNearestGridPoint(
+                e_grbs = pygrib.open(get_elevation_variable(area))
+                e = e_grbs[1]
+                e_x, e_y, e_grid_x, e_grid_y, e_lat, e_lon = get_nearest_grid_point(
                     e, lat, lon, projparams=grb.projparams
                 )
-                eVals = []
+                e_vals = []
             try:
                 if n == 0:
                     val = grb.values[y][x]
-                    if type(val) == NAN:
+                    if type(val) == NaN:
                         val = float("nan")
                     vals.append(val)
-                    allVals.append(val)
-                    nearestVal = val
+                    all_vals.append(val)
+                    nearest_val = val
                     if elev:
-                        eVal = e.values[eY][eX]
-                        if type(eVal) == NAN:
-                            eVal = float("nan")
-                        eVals.append(eVal)
-                        eNearestVal = eVal
+                        e_val = e.values[e_y][e_x]
+                        if type(e_val) == NaN:
+                            e_val = float("nan")
+                        e_vals.append(e_val)
+                        e_nearest_val = e_val
                 else:
-                    for i in range(min(n, negN), max(n, negN) + 1):
-                        for j in range(min(n, negN), max(n, negN) + 1):
+                    for i in range(min(n, neg_n), max(n, neg_n) + 1):
+                        for j in range(min(n, neg_n), max(n, neg_n) + 1):
                             val = grb.values[y + j][x + i]
-                            if type(val) == NAN:
+                            if type(val) == NaN:
                                 val = float("nan")
                             vals.append(val)
-                            allVals.append(val)
+                            all_vals.append(val)
                             if i == 0 and j == 0:
-                                nearestVal = val
+                                nearest_val = val
                             if elev:
-                                eVal = e.values[eY + j][eX + i]
-                                if type(eVal) == NAN:
-                                    eVal = float("nan")
-                                eVals.append(eVal)
+                                e_val = e.values[e_y + j][e_x + i]
+                                if type(e_val) == NaN:
+                                    e_val = float("nan")
+                                e_vals.append(e_val)
                                 if i == 0 and j == 0:
-                                    eNearestVal = eVal
+                                    e_nearest_val = e_val
             except IndexError:
                 raise ValueError(
                     "Given coordinates go beyond the grid. "
@@ -478,29 +496,29 @@ def getForecastAnalysis(
                 )
 
             forecast = {}
-            forecast["nearest"] = nearestVal
+            forecast["nearest"] = nearest_val
             if len(vals) > 1:
                 forecast["points"] = len(vals)
                 forecast["min"] = min(vals)
                 forecast["max"] = max(vals)
                 forecast["mean"] = sum(vals) / len(vals)
                 forecast["median"] = median(vals)
-                forecast["stdDev"] = stdDev(vals)
+                forecast["stdDev"] = std_dev(vals)
                 forecast["sum"] = sum(vals)
 
             if elev:
                 elevation = {}
-                elevation["nearest"] = eNearestVal
+                elevation["nearest"] = e_nearest_val
                 elevation["units"] = e["parameterUnits"]
-                if len(eVals) > 1:
-                    elevation["points"] = len(eVals)
-                    elevation["min"] = min(eVals)
-                    elevation["max"] = max(eVals)
-                    elevation["mean"] = sum(eVals) / len(eVals)
-                    elevation["median"] = median(eVals)
-                    elevation["stdDev"] = stdDev(eVals)
+                if len(e_vals) > 1:
+                    elevation["points"] = len(e_vals)
+                    elevation["min"] = min(e_vals)
+                    elevation["max"] = max(e_vals)
+                    elevation["mean"] = sum(e_vals) / len(e_vals)
+                    elevation["median"] = median(e_vals)
+                    elevation["stdDev"] = std_dev(e_vals)
                 analysis["elevation"] = elevation
-                eGrbs.close()
+                e_grbs.close()
                 elev = False
 
             analysis["forecasts"][t] = forecast
@@ -513,27 +531,29 @@ def getForecastAnalysis(
     analysis["stdDev"] = float("nan")
     analysis["sum"] = float("nan")
 
-    if len(allVals) > 0:
-        analysis["min"] = min(allVals)
-        analysis["max"] = max(allVals)
-        analysis["mean"] = sum(allVals) / len(allVals)
-        analysis["median"] = median(allVals)
-        analysis["stdDev"] = stdDev(allVals)
-        analysis["sum"] = sum(allVals)
+    if len(all_vals) > 0:
+        analysis["min"] = min(all_vals)
+        analysis["max"] = max(all_vals)
+        analysis["mean"] = sum(all_vals) / len(all_vals)
+        analysis["median"] = median(all_vals)
+        analysis["stdDev"] = std_dev(all_vals)
+        analysis["sum"] = sum(all_vals)
 
     return analysis
 
 
+getForecastAnalysis = deprecate_func("getForecastAnalysis", get_forecast_analysis)
+
 """
 
-  Function: unpackString
+  Function: unpack_string
   Purpose: To unpack the packed binary string in the local use section of NDFD gribs
   Params:
  raw: The raw byte string containing the packed data
 """
 
 
-def unpackString(raw):
+def unpack_string(raw):
     num_bytes, remainder = divmod(len(raw) * 8 - 1, 7)
 
     i = int(raw.encode("hex"), 16)
@@ -561,23 +581,25 @@ def unpackString(raw):
     return codes
 
 
+unpackString = deprecate_func("unpackString", unpack_string)
+
 """
 
-  Function: parseWeatherString
+  Function: parse_weather_string
   Purpose: To create a readable, English string describing the weather
   Params:
- wxString: The weather string to translate into English
+ wx_string: The weather string to translate into English
   Notes:
  - See http://graphical.weather.gov/docs/grib_design.html for details
 
 """
 
 
-def parseWeatherString(wxString):
-    weatherString = ""
+def parse_weather_string(wx_string):
+    weather_string = ""
     visibility = float("nan")
 
-    words = wxString.split("^")
+    words = wx_string.split("^")
     for word in words:
         entries = word.split(":")
         coverage = entries[0]
@@ -588,7 +610,7 @@ def parseWeatherString(wxString):
 
         ws = ""
         prepend = False
-        OR = False
+        _OR = False
         likely = False
 
         if "<NoCov>" in coverage:
@@ -626,7 +648,7 @@ def parseWeatherString(wxString):
             elif attribute == "Primary":
                 prepend = True
             elif attribute == "OR":
-                OR = True
+                _OR = True
             elif attribute in DEFS["wx"]["hazards"]:
                 ws += "with " + DEFS["wx"]["hazards"][attribute] + " "
             elif attribute in DEFS["wx"]["attributes"]:
@@ -635,17 +657,17 @@ def parseWeatherString(wxString):
                 stderr.write("WARNING: Unknown attribute code: " + attribute + "\n")
                 stderr.flush()
 
-        if len(weatherString) == 0:
-            weatherString = ws
+        if len(weather_string) == 0:
+            weather_string = ws
         else:
-            if prepend and OR:
-                weatherString = ws + "or " + weatherString.lower()
+            if prepend and _OR:
+                weather_string = ws + "or " + weather_string.lower()
             elif prepend:
-                weatherString = ws + "and " + weatherString.lower()
-            elif OR:
-                weatherString += "or " + ws.lower()
+                weather_string = ws + "and " + weather_string.lower()
+            elif _OR:
+                weather_string += "or " + ws.lower()
             else:
-                weatherString += "and " + ws.lower()
+                weather_string += "and " + ws.lower()
 
         if "<NoVis>" in vis:
             vis = float("nan")
@@ -661,30 +683,32 @@ def parseWeatherString(wxString):
         elif not isnan(vis) and vis < visibility:
             visibility = vis
 
-    if len(weatherString) == 0:
-        weatherString = "<NoWx>"
+    if len(weather_string) == 0:
+        weather_string = "<NoWx>"
     else:
-        weatherString = weatherString.strip().capitalize()
+        weather_string = weather_string.strip().capitalize()
 
-    return weatherString, visibility
+    return weather_string, visibility
 
+
+parseWeatherString = deprecate_func("parseWeatherString", parse_weather_string)
 
 """
 
-  Function: parseAdvisoryString
+  Function: parse_advisory_string
   Purpose: To create a readable, English string describing current weather hazards
   Params:
- wwaString: The Watch, Warning, Advisory string to translate to English
+ wwa_string: The Watch, Warning, Advisory string to translate to English
   Notes:
  - See http://graphical.weather.gov/docs/grib_design.html for details
 
 """
 
 
-def parseAdvisoryString(wwaString):
-    advisoryString = ""
+def parse_advisory_string(wwa_string):
+    advisory_string = ""
 
-    words = wwaString.split("^")
+    words = wwa_string.split("^")
     for word in words:
         if "<None>" in word:
             continue
@@ -694,68 +718,72 @@ def parseAdvisoryString(wwaString):
         advisory = entries[1]
 
         if hazard in DEFS["wwa"]["hazards"]:
-            advisoryString += DEFS["wwa"]["hazards"][hazard] + " "
+            advisory_string += DEFS["wwa"]["hazards"][hazard] + " "
         else:
             stderr.write("WARNING: Unknown hazard code: " + hazard + "\n")
             stderr.flush()
 
         if advisory in DEFS["wwa"]["advisories"]:
-            advisoryString += DEFS["wwa"]["advisories"][advisory] + "\n"
+            advisory_string += DEFS["wwa"]["advisories"][advisory] + "\n"
         else:
             stderr.write("WARNING: Unknown advisory code: " + advisory + "\n")
             stderr.flush()
 
-    if len(advisoryString) == 0:
-        advisoryString = "<None>"
+    if len(advisory_string) == 0:
+        advisory_string = "<None>"
     else:
-        advisoryString = advisoryString.strip().title()
+        advisory_string = advisory_string.strip().title()
 
-    return advisoryString
+    return advisory_string
 
+
+parse_advisory_string = deprecate_func("parseAdvisoryString", parse_advisory_string)
 
 """
 
-  Function: getWeatherAnalysis
+  Function: get_weather_analysis
   Purpose: To get an English representation of the current weather and any NWS
   watch, warning, advisories in effect
 
 """
 
 
-def getWeatherAnalysis(lat, lon, timeStep=1, minTime=None, maxTime=None, area=None):
+def get_weather_analysis(
+    lat, lon, time_step=1, min_time=None, max_time=None, area=None
+):
     if area is None:
-        area = getSmallestGrid(lat, lon)
-    validateArguments("wx", area, timeStep, minTime, maxTime)
+        area = get_smallest_grid(lat, lon)
+    validate_arguments("wx", area, time_step, min_time, max_time)
 
     analysis = {}
     analysis["reqLat"] = lat
     analysis["reqLon"] = lon
-    analysis["forecastTime"] = getLatestForecastTime()
+    analysis["forecastTime"] = get_latest_forecast_time()
     analysis["forecasts"] = {}
 
-    validTimes = []
-    for hour in range(0, 250, timeStep):
+    valid_times = []
+    for hour in range(0, 250, time_step):
         t = (
-            analysis["forecastTime"] -
-            timedelta(hours=analysis["forecastTime"].hour) +
-            timedelta(hours=hour)
+            analysis["forecastTime"]
+            - timedelta(hours=analysis["forecastTime"].hour)
+            + timedelta(hours=hour)
         )
-        if minTime is not None and t < minTime:
+        if min_time is not None and t < min_time:
             continue
-        if maxTime is not None and t > maxTime:
+        if max_time is not None and t > max_time:
             break
-        validTimes.append(t)
+        valid_times.append(t)
 
-    wxGrbs = getVariable("wx", area)
-    firstRun = True
-    for g in wxGrbs:
+    wx_grbs = get_variable("wx", area)
+    first_run = True
+    for g in wx_grbs:
         grbs = pygrib.open(g)
-        ncepgrbs = ncepgrib(g)
+        ncepgrbs = Grib2Decode(g)
         for grb in grbs:
             t = datetime(
                 grb["year"], grb["month"], grb["day"], grb["hour"]
             ) + timedelta(hours=grb["forecastTime"])
-            if t not in validTimes:
+            if t not in valid_times:
                 continue
 
             ncepgrb = ncepgrbs[grb.messagenumber - 1]
@@ -765,18 +793,18 @@ def getWeatherAnalysis(lat, lon, timeStep=1, minTime=None, maxTime=None, area=No
                     "Is it not a wx grib file??"
                 )
 
-            x, y, gridX, gridY, gLat, gLon = getNearestGridPoint(grb, lat, lon)
-            if firstRun:
-                analysis["gridLat"] = gLat
-                analysis["gridLon"] = gLon
+            x, y, grid_x, grid_y, g_lat, g_lon = get_nearest_grid_point(grb, lat, lon)
+            if first_run:
+                analysis["gridLat"] = g_lat
+                analysis["gridLon"] = g_lon
                 try:
                     analysis["deltaX"] = grb["DxInMetres"]
                     analysis["deltaY"] = grb["DyInMetres"]
                 except Exception:
                     analysis["deltaX"] = grb["DiInMetres"]
                     analysis["deltaY"] = grb["DjInMetres"]
-                analysis["distance"] = G.inv(lon, lat, gLon, gLat)[-1]
-                firstRun = False
+                analysis["distance"] = G.inv(lon, lat, g_lon, g_lat)[-1]
+                first_run = False
 
             try:
                 val = grb.values[y][x]
@@ -791,24 +819,24 @@ def getWeatherAnalysis(lat, lon, timeStep=1, minTime=None, maxTime=None, area=No
             forecast["advisoryString"] = None
 
             if val != grb["missingValue"]:
-                defs = unpackString(ncepgrb._local_use_section)
+                defs = unpack_string(ncepgrb._local_use_section)
                 forecast["wxString"] = defs[int(val)]
-                forecast["weatherString"], forecast["visibility"] = parseWeatherString(
-                    forecast["wxString"]
-                )
+                forecast["weatherString"], forecast[
+                    "visibility"
+                ] = parse_weather_string(forecast["wxString"])
 
             analysis["forecasts"][t] = forecast
         grbs.close()
 
-    wwaGrbs = getVariable("wwa", area)
-    for g in wwaGrbs:
+    wwa_grbs = get_variable("wwa", area)
+    for g in wwa_grbs:
         grbs = pygrib.open(g)
-        ncepgrbs = ncepgrib(g)
+        ncepgrbs = Grib2Decode(g)
         for grb in grbs:
             t = datetime(
                 grb["year"], grb["month"], grb["day"], grb["hour"]
             ) + timedelta(hours=grb["forecastTime"])
-            if t not in validTimes:
+            if t not in valid_times:
                 continue
 
             ncepgrb = ncepgrbs[grb.messagenumber - 1]
@@ -818,7 +846,7 @@ def getWeatherAnalysis(lat, lon, timeStep=1, minTime=None, maxTime=None, area=No
                     "Is it not a wwa grib file??"
                 )
 
-            x, y, gridX, gridY, gLat, gLon = getNearestGridPoint(grb, lat, lon)
+            x, y, grid_x, grid_y, g_lat, g_lon = get_nearest_grid_point(grb, lat, lon)
             try:
                 val = grb.values[y][x]
             except IndexError:
@@ -835,11 +863,16 @@ def getWeatherAnalysis(lat, lon, timeStep=1, minTime=None, maxTime=None, area=No
                 forecast = analysis["forecasts"][t]
 
             if val != grb["missingValue"]:
-                defs = unpackString(ncepgrb._local_use_section)
+                defs = unpack_string(ncepgrb._local_use_section)
                 forecast["wwaString"] = defs[int(val)]
-                forecast["advisoryString"] = parseAdvisoryString(forecast["wwaString"])
+                forecast["advisoryString"] = parse_advisory_string(
+                    forecast["wwaString"]
+                )
 
             analysis["forecasts"][t] = forecast
         grbs.close()
 
     return analysis
+
+
+getWeatherAnalysis = deprecate_func("getWeatherAnalysis", get_weather_analysis)
