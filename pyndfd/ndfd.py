@@ -40,7 +40,7 @@ from os import makedirs, path
 from shutil import rmtree
 from sys import stderr
 from tempfile import gettempdir
-
+from six import iterbytes
 import datetime
 
 import pygrib
@@ -185,7 +185,7 @@ def get_variable(var, area):
                     makedirs(local_dir)
                 if not path.isfile(local_var):
                     if NDFD_LOCAL_SERVER is not None:
-                        remote_var = path.join(NDFD_LOCAL_SERVER, var_name)
+                        remote_var = path.join("File:" + NDFD_LOCAL_SERVER, var_name)
                         request.urlretrieve(remote_var, local_var)
                     else:
                         remote_var = NDFD_REMOTE_SERVER + var_name
@@ -232,7 +232,7 @@ def get_elevation_variable(area):
     if not path.isdir(NDFD_TMP):
         makedirs(NDFD_TMP)
     remote_var = path.join(
-        NDFD_LOCAL_SERVER, NDFD_STATIC.format(area), NDFD_VAR.format("elev")
+        "File:" + NDFD_LOCAL_SERVER, NDFD_STATIC.format(area), NDFD_VAR.format("elev")
     )
     local_dir = NDFD_TMP + NDFD_STATIC.format(area)
     local_var = local_dir + NDFD_VAR.format("elev")
@@ -551,7 +551,7 @@ def unpack_string(raw):
 
     num_bytes, remainder = divmod(len(raw) * 8 - 1, 7)
 
-    i = int(raw.encode("hex"), 16)
+    i = int("".join(["%.2x" % x for x in iterbytes(raw)]), 16)
     if remainder:
         i >>= remainder
 
@@ -564,7 +564,7 @@ def unpack_string(raw):
             msg.append(byte)
         i >>= 7
     msg.reverse()
-    msg = b"".join(chr(c) for c in msg)
+    msg = "".join([chr(c) for c in msg])
 
     codes = []
     for line in msg.splitlines():
