@@ -64,6 +64,7 @@ G = Geod(ellps="clrk66")
 CACHE_SERVER_BUFFER_MIN = 20
 
 NDFD_LOCAL_SERVER = None
+NDFD_LOCAL_SERVER_IS_DIR = False
 NDFD_REMOTE_SERVER = "http://tgftp.nws.noaa.gov/SL.us008001/ST.opnl/DF.gr2/"
 NDFD_DIR = "DC.ndfd" + path.sep + "AR.{0}" + path.sep + "VP.{1}" + path.sep
 NDFD_STATIC = "static" + path.sep + "DC.ndfd" + path.sep + "AR.{0}" + path.sep
@@ -77,15 +78,20 @@ NDFD_TMP = gettempdir() + path.sep + str(getuser()) + "_pyndfd" + path.sep
 ########################
 
 
-def set_local_cache_server(uri):
+def set_local_cache_server(uri, is_local_dir=False):
     """
     Set a server to use instead of weather.noaa.gov
 
     Args:
         uri (str): String denoting the server URI to use
+        is_local_dir (bool): Boolean denoting if the local cache server is a local
+                       file system directory
     """
     global NDFD_LOCAL_SERVER
     NDFD_LOCAL_SERVER = uri
+
+    global NDFD_LOCAL_SERVER_IS_DIR
+    NDFD_LOCAL_SERVER_IS_DIR = is_local_dir
 
 
 def set_tmp_folder(path):
@@ -185,7 +191,10 @@ def get_variable(var, area):
                     makedirs(local_dir)
                 if not path.isfile(local_var):
                     if NDFD_LOCAL_SERVER is not None:
-                        remote_var = path.join("File:" + NDFD_LOCAL_SERVER, var_name)
+                        prepend = ""
+                        if NDFD_LOCAL_SERVER_IS_DIR:
+                            prepend = "File:"
+                        remote_var = path.join(prepend + NDFD_LOCAL_SERVER, var_name)
                         request.urlretrieve(remote_var, local_var)
                     else:
                         remote_var = NDFD_REMOTE_SERVER + var_name
@@ -231,8 +240,12 @@ def get_elevation_variable(area):
         )
     if not path.isdir(NDFD_TMP):
         makedirs(NDFD_TMP)
+
+    prepend = ""
+    if NDFD_LOCAL_SERVER_IS_DIR:
+        prepend = "File:"
     remote_var = path.join(
-        "File:" + NDFD_LOCAL_SERVER, NDFD_STATIC.format(area), NDFD_VAR.format("elev")
+        prepend + NDFD_LOCAL_SERVER, NDFD_STATIC.format(area), NDFD_VAR.format("elev")
     )
     local_dir = NDFD_TMP + NDFD_STATIC.format(area)
     local_var = local_dir + NDFD_VAR.format("elev")

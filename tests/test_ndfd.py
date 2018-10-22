@@ -199,7 +199,7 @@ def test_get_smallest_grid():
 
 
 def test_get_nearest_grid_point():
-    ndfd.set_local_cache_server(os.path.abspath(CACHE_PATH))
+    ndfd.set_local_cache_server(os.path.abspath(CACHE_PATH), is_local_dir=True)
     ndfd.set_tmp_folder(FILES_PATH)
     shutil.rmtree(FILES_PATH, ignore_errors=True)
 
@@ -219,7 +219,7 @@ def test_get_nearest_grid_point():
 
 
 def test_get_nearest_grid_point_projparams():
-    ndfd.set_local_cache_server(os.path.abspath(CACHE_PATH))
+    ndfd.set_local_cache_server(os.path.abspath(CACHE_PATH), is_local_dir=True)
     ndfd.set_tmp_folder(FILES_PATH)
     shutil.rmtree(FILES_PATH, ignore_errors=True)
 
@@ -265,7 +265,7 @@ def test_get_forecast_analysis_bad_n_value():
 
 
 def test_get_forecast_analysis_n_0():
-    ndfd.set_local_cache_server(os.path.abspath(CACHE_PATH))
+    ndfd.set_local_cache_server(os.path.abspath(CACHE_PATH), is_local_dir=True)
     ndfd.set_tmp_folder(FILES_PATH)
     shutil.rmtree(FILES_PATH, ignore_errors=True)
 
@@ -285,11 +285,10 @@ def test_get_forecast_analysis_n_0():
     assert result["deltaY"] == 2500.0
     assert result["distance"] == 738.7266092794616
     assert result["min"] == 301.5
-    assert result["mean"] == 306.3000011444092
 
 
 def test_get_forecast_analysis_n_2():
-    ndfd.set_local_cache_server(os.path.abspath(CACHE_PATH))
+    ndfd.set_local_cache_server(os.path.abspath(CACHE_PATH), is_local_dir=True)
     ndfd.set_tmp_folder(FILES_PATH)
     shutil.rmtree(FILES_PATH, ignore_errors=True)
 
@@ -310,11 +309,10 @@ def test_get_forecast_analysis_n_2():
     assert result["deltaY"] == 2500.0
     assert result["distance"] == 738.7266092794616
     assert result["min"] == 301.5
-    assert result["mean"] == 306.59450065612793
 
 
 def test_get_forecast_analysis_bad_coordinates():
-    ndfd.set_local_cache_server(os.path.abspath(CACHE_PATH))
+    ndfd.set_local_cache_server(os.path.abspath(CACHE_PATH), is_local_dir=True)
     ndfd.set_tmp_folder(FILES_PATH)
     shutil.rmtree(FILES_PATH, ignore_errors=True)
 
@@ -415,7 +413,7 @@ def test_parse_advisory_string(advisory_string):
 
 
 def test_get_weather_analysis():
-    ndfd.set_local_cache_server(os.path.abspath(CACHE_PATH))
+    ndfd.set_local_cache_server(os.path.abspath(CACHE_PATH), is_local_dir=True)
     ndfd.set_tmp_folder(FILES_PATH)
     shutil.rmtree(FILES_PATH, ignore_errors=True)
 
