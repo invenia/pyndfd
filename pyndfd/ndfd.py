@@ -34,20 +34,20 @@ Purpose: Routines that will cache NDFD forecast variables locally
 ###########
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import datetime
 from getpass import getuser
 from math import isnan, sqrt
 from os import makedirs, path
 from shutil import rmtree
 from sys import stderr
 from tempfile import gettempdir
-from six import iterbytes
-import datetime
 
 import pygrib
+import six.moves.urllib.request as request
 from ncepgrib2 import Grib2Decode
 from numpy.ma.core import MaskedConstant as NaN
 from pyproj import Geod, Proj
-import six.moves.urllib.request as request
+from six import iterbytes
 
 from pyndfd.ndfd_defs import ndfd_defs
 from pyndfd.utils import deprecate_func
@@ -311,18 +311,16 @@ def get_nearest_grid_point(grb, lat, lon, projparams=None):
     )
     grid_x, grid_y = p(lon, lat)
 
-    x_name = u"DxInMetres"
-    y_name = u"DyInMetres"
+    x_name = "DxInMetres"
+    y_name = "DyInMetres"
     if not grb.valid_key(x_name) and not grb.valid_key(y_name):
-        x_name = u"DiInMetres"
-        y_name = u"DjInMetres"
+        x_name = "DiInMetres"
+        y_name = "DjInMetres"
 
     x = int(round((grid_x - offset_x) / grb[x_name]))
     y = int(round((grid_y - offset_y) / grb[y_name]))
     g_lon, g_lat = p(
-        x * grb[x_name] + offset_x,
-        y * grb[y_name] + offset_y,
-        inverse=True,
+        x * grb[x_name] + offset_x, y * grb[y_name] + offset_y, inverse=True
     )
     return x, y, grid_x, grid_y, g_lat, g_lon
 
@@ -881,8 +879,7 @@ def get_weather_analysis(
 setLocalCacheServer = deprecate_func("setLocalCacheServer", set_local_cache_server)
 stdDev = deprecate_func("stdDev", std_dev)
 getLatestForecastTime = deprecate_func(
-    "getLatestForecastTime",
-    get_latest_forecast_time
+    "getLatestForecastTime", get_latest_forecast_time
 )
 getVariable = deprecate_func("getVariable", get_variable)
 getElevationVariable = deprecate_func("getElevationVariable", get_elevation_variable)

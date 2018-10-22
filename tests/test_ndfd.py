@@ -1,13 +1,12 @@
-import math
 import datetime
-import pytest
-import shutil
+import math
 import os.path
+import shutil
 
 import pygrib
-
 import six.moves.urllib.request as request
 
+import pytest
 from pyndfd import ndfd
 
 FILES_PATH = "./tests/files/local/"
@@ -20,6 +19,7 @@ def test_set_local_cache_server():
 
     # Need to import the global after changing it to test it
     from pyndfd.ndfd import NDFD_LOCAL_SERVER
+
     assert NDFD_LOCAL_SERVER == uri
 
     # Re-set it to None
@@ -50,13 +50,14 @@ def test_median():
 
 @pytest.fixture
 def mock_utcnow_zero_minute(monkeypatch):
-    class mock_datetime(datetime.datetime):
+    class MockDatetime(datetime.datetime):
         @classmethod
         def utcnow(cls):
             return datetime.datetime(
                 year=2018, month=1, day=1, hour=1, minute=1, second=1, microsecond=1
             )
-    monkeypatch.setattr(datetime, 'datetime', mock_datetime)
+
+    monkeypatch.setattr(datetime, "datetime", MockDatetime)
 
 
 def test_get_latest_forecast_time_before_min(mock_utcnow_zero_minute):
@@ -72,13 +73,14 @@ def test_get_latest_forecast_time_before_min(mock_utcnow_zero_minute):
 
 @pytest.fixture
 def mock_utcnow_thirty_minute(monkeypatch):
-    class mock_datetime(datetime.datetime):
+    class MockDatetime(datetime.datetime):
         @classmethod
         def utcnow(cls):
             return datetime.datetime(
                 year=2018, month=1, day=1, hour=1, minute=30, second=1, microsecond=1
             )
-    monkeypatch.setattr(datetime, 'datetime', mock_datetime)
+
+    monkeypatch.setattr(datetime, "datetime", MockDatetime)
 
 
 def test_get_latest_forecast_time_after_min(mock_utcnow_thirty_minute):
@@ -101,6 +103,7 @@ def test_get_variable_invalid_area():
 def mock_urlretrieve(monkeypatch):
     def mock_retrieve(remote_var, local_var):
         return
+
     monkeypatch.setattr(request, "urlretrieve", mock_retrieve)
 
 
@@ -129,6 +132,7 @@ def mock_urlretrieve_write(monkeypatch):
         with open(local_var, "w") as f:
             f.write("test")
         return
+
     monkeypatch.setattr(request, "urlretrieve", mock_retrieve)
 
 
@@ -142,7 +146,7 @@ def test_get_variable_with_write(mock_urlretrieve_write, mock_utcnow_zero_minute
             "DC.ndfd",
             "AR.conus",
             "VP.004-007",
-            "ds.apt.bin"
+            "ds.apt.bin",
         ),
         os.path.join(
             FILES_PATH,
@@ -150,7 +154,7 @@ def test_get_variable_with_write(mock_urlretrieve_write, mock_utcnow_zero_minute
             "DC.ndfd",
             "AR.conus",
             "VP.001-003",
-            "ds.apt.bin"
+            "ds.apt.bin",
         ),
     ]
 
@@ -183,13 +187,7 @@ def test_get_elevation_variable_pass(mock_urlretrieve_write):
     ndfd.set_local_cache_server("Test")
     ndfd.set_tmp_folder(FILES_PATH)
     shutil.rmtree(FILES_PATH, ignore_errors=True)
-    expected = os.path.join(
-        FILES_PATH,
-        "static",
-        "DC.ndfd",
-        "AR.hawaii",
-        "ds.elev.bin"
-    )
+    expected = os.path.join(FILES_PATH, "static", "DC.ndfd", "AR.hawaii", "ds.elev.bin")
 
     result = ndfd.get_elevation_variable("hawaii")
     assert result == expected
@@ -338,14 +336,8 @@ def test_unpack_string():
 
 
 WEATHER_STRINGS = [
-    (
-        "Lkly:A:-:0SM:LgA",
-        ("Light hail likely with large hail", 0.0),
-    ),
-    (
-        "Sct:SW:-:<NoVis>:",
-        ("Scattered light snow showers", float("nan")),
-    ),
+    ("Lkly:A:-:0SM:LgA", ("Light hail likely with large hail", 0.0)),
+    ("Sct:SW:-:<NoVis>:", ("Scattered light snow showers", float("nan"))),
     (
         "Ocnl:R:-:<NoVis>:^Ocnl:S:-:<NoVis>:^SChc:ZR:-:<NoVis>:",
         (
@@ -360,28 +352,22 @@ WEATHER_STRINGS = [
         "Wide:FR:-:<NoVis>:OLA",
         ("Widespread light frost on outlying areas", float("nan")),
     ),
-    (
-        "<NoCov>:<NoWx>:<NoInten>:<NoVis>:",
-        ("<NoWx>", float("nan")),
-    ),
+    ("<NoCov>:<NoWx>:<NoInten>:<NoVis>:", ("<NoWx>", float("nan"))),
     (
         "Sct:RW:-:<NoVis>:^Iso:T:m:<NoVis>:",
         (
             "Scattered light rain showers and isolated moderate thunderstorms",
-            float("nan")
+            float("nan"),
         ),
     ),
     (
         "Sct:T:+:<NoVis>:DmgW,LgA",
         (
             "Scattered heavy thunderstorms with damaging winds with large hail",
-            float("nan")
+            float("nan"),
         ),
     ),
-    (
-        "Wrong:Wrong:Wrong:Wrong:Wrong,Primary,OR,Mention",
-        ("<NoWx>", float("nan")),
-    ),
+    ("Wrong:Wrong:Wrong:Wrong:Wrong,Primary,OR,Mention", ("<NoWx>", float("nan"))),
     (
         "Lkly:A:-:<NoVis>:^Lkly:A:-:0SM:LgA,Primary,OR",
         ("Light hail likely with large hail or light hail likely", 0.0),
@@ -390,10 +376,7 @@ WEATHER_STRINGS = [
         "Lkly:A:-:<NoVis>:^Lkly:A:-:0SM:Primary",
         ("Light hail likely and light hail likely", 0.0),
     ),
-    (
-        "Lkly:A:-:1SM:^Lkly:A:-:0SM:OR",
-        ("Light hail likely or light hail likely", 0.0),
-    ),
+    ("Lkly:A:-:1SM:^Lkly:A:-:0SM:OR", ("Light hail likely or light hail likely", 0.0)),
 ]
 
 

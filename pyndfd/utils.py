@@ -16,6 +16,7 @@ def deprecate_func(old_name, new_function):
         generate a deprecation warning, and then return the results of calling the
         new function.
     """
+
     def df(*args, **kwargs):
         warnings.warn(
             "'{}' is not a Pep8 compliant function name, use '{}' instead".format(
