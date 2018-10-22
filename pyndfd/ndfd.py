@@ -34,7 +34,6 @@ Purpose: Routines that will cache NDFD forecast variables locally
 ###########
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from datetime import datetime, timedelta
 from getpass import getuser
 from math import isnan, sqrt
 from os import makedirs, path
@@ -42,11 +41,13 @@ from shutil import rmtree
 from sys import stderr
 from tempfile import gettempdir
 
+import datetime
+
 import pygrib
 from ncepgrib2 import Grib2Decode
 from numpy.ma.core import MaskedConstant as NaN
 from pyproj import Geod, Proj
-from six.moves.urllib.request import urlretrieve
+import six.moves.urllib.request as request
 
 from pyndfd.ndfd_defs import ndfd_defs
 from pyndfd.utils import deprecate_func
@@ -85,6 +86,17 @@ def set_local_cache_server(uri):
     """
     global NDFD_LOCAL_SERVER
     NDFD_LOCAL_SERVER = uri
+
+
+def set_tmp_folder(path):
+    """
+    Change the temporary folder path
+
+    Args:
+        path (str): String denoting the tmp folder path
+    """
+    global NDFD_TMP
+    NDFD_TMP = path
 
 
 def std_dev(vals):
@@ -135,9 +147,9 @@ def get_latest_forecast_time():
     Returns:
         datetime: The latest forecast time
     """
-    latest_time = datetime.utcnow()
+    latest_time = datetime.datetime.utcnow()
     if latest_time.minute <= CACHE_SERVER_BUFFER_MIN:
-        latest_time = datetime.utcnow() - timedelta(hours=1)
+        latest_time = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
     return latest_time.replace(minute=0, second=0, microsecond=0)
 
 
@@ -173,11 +185,11 @@ def get_variable(var, area):
                     makedirs(local_dir)
                 if not path.isfile(local_var):
                     if NDFD_LOCAL_SERVER is not None:
-                        remote_var = NDFD_LOCAL_SERVER + var_name
-                        urlretrieve(remote_var, local_var)
+                        remote_var = path.join(NDFD_LOCAL_SERVER, var_name)
+                        request.urlretrieve(remote_var, local_var)
                     else:
                         remote_var = NDFD_REMOTE_SERVER + var_name
-                        urlretrieve(remote_var, local_var)
+                        request.urlretrieve(remote_var, local_var)
                 if not path.isfile(local_var):
                     raise RuntimeError(
                         "Cannot retrieve NDFD variables at this time. "
@@ -203,7 +215,7 @@ def get_elevation_variable(area):
 
     Notes:
         - Cannot be retrieved from weather.noaa.gov, must use a local cache server
-        using the format in const NDFD_STATIC
+          using the format in const NDFD_STATIC
         - Puerto Rico terrian info not currently available.
         - Terrain data for NDFD will be updated sometime in 2015
     """
@@ -219,13 +231,15 @@ def get_elevation_variable(area):
         )
     if not path.isdir(NDFD_TMP):
         makedirs(NDFD_TMP)
-    remote_var = NDFD_LOCAL_SERVER + NDFD_STATIC.format(area) + NDFD_VAR.format("elev")
+    remote_var = path.join(
+        NDFD_LOCAL_SERVER, NDFD_STATIC.format(area), NDFD_VAR.format("elev")
+    )
     local_dir = NDFD_TMP + NDFD_STATIC.format(area)
     local_var = local_dir + NDFD_VAR.format("elev")
     if not path.isdir(local_dir):
         makedirs(local_dir)
     if not path.isfile(local_var):
-        urlretrieve(remote_var, local_var)
+        request.urlretrieve(remote_var, local_var)
     if not path.isfile(local_var):
         raise RuntimeError(
             "Cannot retrieve NDFD variables at this time. Try again in a moment."
@@ -249,7 +263,7 @@ def get_smallest_grid(lat, lon):
     smallest = "neast"
     min_dist = G.inv(
         lon, lat, DEFS["grids"][smallest]["lonC"], DEFS["grids"][smallest]["latC"]
-    )
+    )[-1]
 
     for area in DEFS["grids"].keys():
         if area == "conus" or area == "nhemi" or area == "npacocn":
@@ -296,22 +310,20 @@ def get_nearest_grid_point(grb, lat, lon, projparams=None):
         grb["latitudeOfFirstGridPointInDegrees"],
     )
     grid_x, grid_y = p(lon, lat)
-    try:
-        x = int(round((grid_x - offset_x) / grb["DxInMetres"]))
-        y = int(round((grid_y - offset_y) / grb["DyInMetres"]))
-        g_lon, g_lat = p(
-            x * grb["DxInMetres"] + offset_x,
-            y * grb["DyInMetres"] + offset_y,
-            inverse=True,
-        )
-    except Exception:
-        x = int(round((grid_x - offset_x) / grb["DiInMetres"]))
-        y = int(round((grid_y - offset_y) / grb["DjInMetres"]))
-        g_lon, g_lat = p(
-            x * grb["DiInMetres"] + offset_x,
-            y * grb["DjInMetres"] + offset_y,
-            inverse=True,
-        )
+
+    x_name = u"DxInMetres"
+    y_name = u"DyInMetres"
+    if not grb.valid_key(x_name) and not grb.valid_key(y_name):
+        x_name = u"DiInMetres"
+        y_name = u"DjInMetres"
+
+    x = int(round((grid_x - offset_x) / grb[x_name]))
+    y = int(round((grid_y - offset_y) / grb[y_name]))
+    g_lon, g_lat = p(
+        x * grb[x_name] + offset_x,
+        y * grb[y_name] + offset_y,
+        inverse=True,
+    )
     return x, y, grid_x, grid_y, g_lat, g_lon
 
 
@@ -341,7 +353,7 @@ def validate_arguments(var, area, time_step, min_time, max_time):
 
     try:
         area_vp = DEFS["vars"][area]
-    except IndexError:
+    except KeyError:
         raise ValueError("Invalid Area.")
 
     valid_var = False
@@ -364,7 +376,7 @@ def get_forecast_analysis(
         var (str):  The NDFD variable to analyzes
         lat (float):  Latitude
         lon (float):  Longitude
-        n (int):  The levels away from the grid point to analyze. Default = 1
+        n (int):  The levels away from the grid point to analyze. Default = 0
         time_step (int): The time step in hours to use in analyzing forecasts.
                          Default = 1
         elev (bool):  Boolean that indicates whether to include elevation of the grid
@@ -397,8 +409,8 @@ def get_forecast_analysis(
     for hour in range(0, 250, time_step):
         t = (
             analysis["forecastTime"]
-            - timedelta(hours=analysis["forecastTime"].hour)
-            + timedelta(hours=hour)
+            - datetime.timedelta(hours=analysis["forecastTime"].hour)
+            + datetime.timedelta(hours=hour)
         )
         if min_time is not None and t < min_time:
             continue
@@ -412,9 +424,9 @@ def get_forecast_analysis(
     for g in var_grbs:
         grbs = pygrib.open(g)
         for grb in grbs:
-            t = datetime(
+            t = datetime.datetime(
                 grb["year"], grb["month"], grb["day"], grb["hour"]
-            ) + timedelta(hours=grb["forecastTime"])
+            ) + datetime.timedelta(hours=grb["forecastTime"])
             if t not in valid_times:
                 continue
 
@@ -423,12 +435,14 @@ def get_forecast_analysis(
                 analysis["gridLat"] = g_lat
                 analysis["gridLon"] = g_lon
                 analysis["units"] = grb["parameterUnits"]
-                try:
-                    analysis["deltaX"] = grb["DxInMetres"]
-                    analysis["deltaY"] = grb["DyInMetres"]
-                except Exception:
-                    analysis["deltaX"] = grb["DiInMetres"]
-                    analysis["deltaY"] = grb["DjInMetres"]
+
+                x_name = "DxInMetres"
+                y_name = "DyInMetres"
+                if not grb.valid_key(x_name) and not grb.valid_key(y_name):
+                    x_name = "DiInMetres"
+                    y_name = "DjInMetres"
+                analysis["deltaX"] = grb[x_name]
+                analysis["deltaY"] = grb[y_name]
                 analysis["distance"] = G.inv(lon, lat, g_lon, g_lat)[-1]
                 first_run = False
 
@@ -624,8 +638,8 @@ def parse_weather_string(wx_string):
             ws += "likely "
 
         for attribute in attributes:
-            if len(attribute) == 0 or "<None>" in attribute or "Mention" in attribute:
-                pass
+            if attribute == "" or "<None>" in attribute or "Mention" in attribute:
+                continue
             elif attribute == "Primary":
                 prepend = True
             elif attribute == "OR":
@@ -751,8 +765,8 @@ def get_weather_analysis(
     for hour in range(0, 250, time_step):
         t = (
             analysis["forecastTime"]
-            - timedelta(hours=analysis["forecastTime"].hour)
-            + timedelta(hours=hour)
+            - datetime.timedelta(hours=analysis["forecastTime"].hour)
+            + datetime.timedelta(hours=hour)
         )
         if min_time is not None and t < min_time:
             continue
@@ -766,9 +780,9 @@ def get_weather_analysis(
         grbs = pygrib.open(g)
         ncepgrbs = Grib2Decode(g)
         for grb in grbs:
-            t = datetime(
+            t = datetime.datetime(
                 grb["year"], grb["month"], grb["day"], grb["hour"]
-            ) + timedelta(hours=grb["forecastTime"])
+            ) + datetime.timedelta(hours=grb["forecastTime"])
             if t not in valid_times:
                 continue
 
@@ -783,12 +797,14 @@ def get_weather_analysis(
             if first_run:
                 analysis["gridLat"] = g_lat
                 analysis["gridLon"] = g_lon
-                try:
-                    analysis["deltaX"] = grb["DxInMetres"]
-                    analysis["deltaY"] = grb["DyInMetres"]
-                except Exception:
-                    analysis["deltaX"] = grb["DiInMetres"]
-                    analysis["deltaY"] = grb["DjInMetres"]
+
+                x_name = "DxInMetres"
+                y_name = "DyInMetres"
+                if not grb.valid_key(x_name) and not grb.valid_key(y_name):
+                    x_name = "DiInMetres"
+                    y_name = "DjInMetres"
+                analysis["deltaX"] = grb[x_name]
+                analysis["deltaY"] = grb[y_name]
                 analysis["distance"] = G.inv(lon, lat, g_lon, g_lat)[-1]
                 first_run = False
 
@@ -819,9 +835,9 @@ def get_weather_analysis(
         grbs = pygrib.open(g)
         ncepgrbs = Grib2Decode(g)
         for grb in grbs:
-            t = datetime(
+            t = datetime.datetime(
                 grb["year"], grb["month"], grb["day"], grb["hour"]
-            ) + timedelta(hours=grb["forecastTime"])
+            ) + datetime.timedelta(hours=grb["forecastTime"])
             if t not in valid_times:
                 continue
 
@@ -876,5 +892,5 @@ validateArguments = deprecate_func("validateArguments", validate_arguments)
 getForecastAnalysis = deprecate_func("getForecastAnalysis", get_forecast_analysis)
 unpackString = deprecate_func("unpackString", unpack_string)
 parseWeatherString = deprecate_func("parseWeatherString", parse_weather_string)
-parse_advisory_string = deprecate_func("parseAdvisoryString", parse_advisory_string)
+parseAdvisoryString = deprecate_func("parseAdvisoryString", parse_advisory_string)
 getWeatherAnalysis = deprecate_func("getWeatherAnalysis", get_weather_analysis)
