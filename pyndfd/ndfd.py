@@ -75,32 +75,28 @@ NDFD_TMP = gettempdir() + path.sep + str(getuser()) + "_pyndfd" + path.sep
 #                      #
 ########################
 
-"""
-
-  Function: set_local_cache_server
-  Purpose: Set a server to use instead of weather.noaa.gov
-  Params:
-    uri: String denoting the server URI to use
-
-"""
-
 
 def set_local_cache_server(uri):
+    """
+    Set a server to use instead of weather.noaa.gov
+
+    Args:
+        uri (str): String denoting the server URI to use
+    """
     global NDFD_LOCAL_SERVER
     NDFD_LOCAL_SERVER = uri
 
 
-"""
-
-  Function: std_dev
-  Purpose: Calculate the standard deviation of a list of float values
-  Params:
- vals: List of float values to use in calculation
-
-"""
-
-
 def std_dev(vals):
+    """
+    Calculate the standard deviation of a list of float values
+
+    Args:
+        vals ([float]): List of float values to use in calculation
+
+    Returns:
+        float: The standard deviation
+    """
     mean = sum(vals) / len(vals)
     squared = []
     for val in vals:
@@ -109,17 +105,16 @@ def std_dev(vals):
     return sqrt(variance)
 
 
-"""
-
-  Function: median
-  Purpose: Calculate the median of a list of int/float values
-  Params:
- vals: List of int/float values to use in calculation
-
-"""
-
-
 def median(vals):
+    """
+    Calculate the median of a list of int/float values
+
+    Args:
+        vals ([int/float]): List of int/float values to use in calculation
+
+    Returns:
+        int: The median value
+    """
     sorted_list = sorted(vals)
     list_length = len(vals)
     index = (list_length - 1) // 2
@@ -129,35 +124,36 @@ def median(vals):
         return (sorted_list[index] + sorted_list[index + 1]) / 2.0
 
 
-"""
-
-  Function:  get_latest_forecast_time
-  Purpose:   For caching purposes, compare this time to cached time to see if
-  the cached variable needs to be updated
-
-"""
-
-
 def get_latest_forecast_time():
+    """
+    For caching purposes, compare this time to cached time to see if
+    the cached variable needs to be updated
+
+    Args:
+        None
+
+    Returns:
+        datetime: The latest forecast time
+    """
     latest_time = datetime.utcnow()
     if latest_time.minute <= CACHE_SERVER_BUFFER_MIN:
         latest_time = datetime.utcnow() - timedelta(hours=1)
     return latest_time.replace(minute=0, second=0, microsecond=0)
 
 
-"""
-
-  Function: get_variable
-  Purpose: Cache the requested variable if not already cached and return
-  the paths of the cached files
-  Params:
- var: The NDFD variable to retrieve
- area: The NDFD grid area to retrieve
-
-"""
-
-
 def get_variable(var, area):
+    """
+    Cache the requested variable if not already cached and return the paths
+    of the cached files
+
+    Args:
+        var (str): The NDFD variable to retrieve
+        area (str): The NDFD grid area to retrieve
+
+    Returns:
+        list: A list of paths to the cached files
+    """
+
     gribs = []
     dir_time = NDFD_TMP + get_latest_forecast_time().strftime("%Y-%m-%d-%H") + path.sep
     if not path.isdir(dir_time):
@@ -194,24 +190,24 @@ def get_variable(var, area):
     return gribs
 
 
-"""
-
-  Function: get_elevation_variable
-  Purpose: Cache the static elevation variable if not already cached and return
-  the path of the cached file
-  Params:
- area: The NDFD grid area to retrieve elevation for
-
-  Notes:
- - Cannot be retrieved from weather.noaa.gov, must use a local cache server
-   using the format in const NDFD_STATIC
- - Puerto Rico terrian info not currently available.
- - Terrain data for NDFD will be updated sometime in 2015
-
-"""
-
-
 def get_elevation_variable(area):
+    """
+    Cache the static elevation variable if not already cached and return
+    the path of the cached file
+
+    Args:
+        area (str): The NDFD grid area to retrieve elevation for
+
+    Returns:
+        str: The path of the cached file
+
+    Notes:
+        - Cannot be retrieved from weather.noaa.gov, must use a local cache server
+        using the format in const NDFD_STATIC
+        - Puerto Rico terrian info not currently available.
+        - Terrain data for NDFD will be updated sometime in 2015
+    """
+
     if area == "puertori":
         raise ValueError(
             "Elevation currently not available for Puerto Rico. Set elev=False"
@@ -237,19 +233,19 @@ def get_elevation_variable(area):
     return local_var
 
 
-"""
-
-  Function: get_smallest_grid
-  Purpose: Use the provided lat, lon coordinates to find the smallest
-  NDFD area that contains those coordinates. Return the name of the area.
-  Params:
- lat: Latitude
- lon: Longitude
-
-"""
-
-
 def get_smallest_grid(lat, lon):
+    """
+    Use the provided lat, lon coordinates to find the smallest
+    NDFD area that contains those coordinates. Return the name of the area.
+
+    Args:
+        lat (float): Latitude
+        lon (float): Longitude
+
+    Returns:
+        str: The name of the smallest area
+    """
+
     smallest = "neast"
     min_dist = G.inv(
         lon, lat, DEFS["grids"][smallest]["lonC"], DEFS["grids"][smallest]["latC"]
@@ -269,23 +265,28 @@ def get_smallest_grid(lat, lon):
     return smallest
 
 
-"""
-
-  Function: get_nearest_grid_point
-  Purpose: Find the nearest grid point to the provided coordinates in the supplied
-  grib message. Return the indexes to the numpy array as well as the
-  lat/lon and grid coordinates of the grid point.
-  Params:
- grb:  The grib message to search
- lat:  Latitude
- lon:  Longitude
- projparams: Optional: Use to supply different Proj4 parameters than the
-      supplied grib message uses.
-
-"""
-
-
 def get_nearest_grid_point(grb, lat, lon, projparams=None):
+    """
+    Find the nearest grid point to the provided coordinates in the supplied
+    grib message. Return the indexes to the numpy array as well as the
+    lat/lon and grid coordinates of the grid point.
+
+    Args:
+        grb (str):  The grib message to search
+        lat (float):  Latitude
+        lon (float):  Longitude
+        projparams (dict) [Optional]:  Use to supply different Proj4 parameters
+                                       than the supplied grib message uses.
+
+    Returns:
+        int: x index into the numpy array
+        int: y index into the numpy array
+        int: x grid coordinate
+        int: y grid coordinate
+        float: latitude of the grid point
+        float: longitude of the grid point
+    """
+
     if projparams is None:
         p = Proj(grb.projparams)
     else:
@@ -314,24 +315,23 @@ def get_nearest_grid_point(grb, lat, lon, projparams=None):
     return x, y, grid_x, grid_y, g_lat, g_lon
 
 
-"""
-
-  Function: validate_arguments
-  Purpose: Validate the arguments passed into an analysis function to make sure
-  they will work with each other.
-  Params:
- var:  The NDFD variable being requested
- area:  The NDFD grid area being requested
- time_step: The time step to be used in the returned analysis
- min_time: The minimum forecast time to analyze
- max_time: The maximum forecast time to analyze
-  Notes:
- - max_time is not currently being evaluated
-
-"""
-
-
 def validate_arguments(var, area, time_step, min_time, max_time):
+    """
+    Validate the arguments passed into an analysis function to make sure
+    they will work with each other.
+
+    Args:
+        var (str):  The NDFD variable being requested
+        area (str):  The NDFD grid area being requested
+        time_step (int): The time step to be used in the returned analysis
+        min_time (datetime): The minimum forecast time to analyze
+        max_time (datetime): The maximum forecast time to analyze
+
+    Notes:
+        - min_time is not currently being evaluated
+        - max_time is not currently being evaluated
+    """
+
     if time_step < 1:
         raise ValueError("time_step must be >= 1")
 
@@ -353,30 +353,30 @@ def validate_arguments(var, area, time_step, min_time, max_time):
         raise ValueError("Variable not available in area: " + area)
 
 
-"""
-
-  Function: get_forecast_analysis
-  Purpose: Analyze a grid point for any NDFD forecast variable in any NDFD grid area.
-  The grid point will be the closest point to the supplied coordinates.
-  Params:
- var:  The NDFD variable to analyzes
- lat:  Latitude
- lon:  Longitude
- n:  The levels away from the grid point to analyze. Default = 1
- time_step: The time step in hours to use in analyzing forecasts. Default = 1
- elev:  Boolean that indicates whether to include elevation of the grid points
-   Default = False
- min_time: Optional minimum time for the forecast analysis
- max_time: Optional maximum time for the forecast analysis
- area:  Used to specify a specific NDFD grid area. Default is to find the
-   smallest grid the supplied coordinates lie in.
-
-"""
-
-
 def get_forecast_analysis(
     var, lat, lon, n=0, time_step=1, elev=False, min_time=None, max_time=None, area=None
 ):
+    """
+    Analyze a grid point for any NDFD forecast variable in any NDFD grid area.
+    The grid point will be the closest point to the supplied coordinates.
+
+    Args:
+        var (str):  The NDFD variable to analyzes
+        lat (float):  Latitude
+        lon (float):  Longitude
+        n (int):  The levels away from the grid point to analyze. Default = 1
+        time_step (int): The time step in hours to use in analyzing forecasts.
+                         Default = 1
+        elev (bool):  Boolean that indicates whether to include elevation of the grid
+                      points. Default = False
+        min_time (datetime): Optional minimum time for the forecast analysis
+        max_time (datetime): Optional maximum time for the forecast analysis
+        area (str):  Used to specify a specific NDFD grid area. Default is to find the
+                     smallest grid the supplied coordinates lie in.
+
+    Returns:
+        dict: Forecast Analysis
+    """
     if n < 0:
         raise ValueError("n must be >= 0")
     neg_n = n * -1
@@ -524,16 +524,17 @@ def get_forecast_analysis(
     return analysis
 
 
-"""
-
-  Function: unpack_string
-  Purpose: To unpack the packed binary string in the local use section of NDFD gribs
-  Params:
- raw: The raw byte string containing the packed data
-"""
-
-
 def unpack_string(raw):
+    """
+    To unpack the packed binary string in the local use section of NDFD gribs
+
+    Args:
+        raw (list): The raw byte string containing the packed data
+
+    Returns:
+        list: List of codes
+    """
+
     num_bytes, remainder = divmod(len(raw) * 8 - 1, 7)
 
     i = int(raw.encode("hex"), 16)
@@ -561,19 +562,21 @@ def unpack_string(raw):
     return codes
 
 
-"""
-
-  Function: parse_weather_string
-  Purpose: To create a readable, English string describing the weather
-  Params:
- wx_string: The weather string to translate into English
-  Notes:
- - See http://graphical.weather.gov/docs/grib_design.html for details
-
-"""
-
-
 def parse_weather_string(wx_string):
+    """
+    To create a readable, English string describing the weather
+
+    Args:
+        wx_string (str): The weather string to translate into English
+
+    Returns:
+        str: Weather string
+        float: Visibility
+
+    Notes:
+        - See http://graphical.weather.gov/docs/grib_design.html for details
+    """
+
     weather_string = ""
     visibility = float("nan")
 
@@ -669,19 +672,20 @@ def parse_weather_string(wx_string):
     return weather_string, visibility
 
 
-"""
-
-  Function: parse_advisory_string
-  Purpose: To create a readable, English string describing current weather hazards
-  Params:
- wwa_string: The Watch, Warning, Advisory string to translate to English
-  Notes:
- - See http://graphical.weather.gov/docs/grib_design.html for details
-
-"""
-
-
 def parse_advisory_string(wwa_string):
+    """
+    To create a readable, English string describing current weather hazards
+
+    Args:
+        wwa_string: The Watch, Warning, Advisory string to translate to English
+
+    Returns:
+        str: Advisory string
+
+    Notes:
+        - See http://graphical.weather.gov/docs/grib_design.html for details
+    """
+
     advisory_string = ""
 
     words = wwa_string.split("^")
@@ -713,18 +717,26 @@ def parse_advisory_string(wwa_string):
     return advisory_string
 
 
-"""
-
-  Function: get_weather_analysis
-  Purpose: To get an English representation of the current weather and any NWS
-  watch, warning, advisories in effect
-
-"""
-
-
 def get_weather_analysis(
     lat, lon, time_step=1, min_time=None, max_time=None, area=None
 ):
+    """
+    To get an English representation of the current weather and any NWS
+    watch, warning, advisories in effect
+
+    Args:
+        lat (float): Latitude
+        lon (float): Longitude
+        time_step (int): The time step in hours to use in anlyzing weather. Default = 1
+        min_time (datetime): Optional minimum time for the weather analysis
+        max_time (datetime): Optional maximum time for the weather analysis
+        area (str): Used to specify a specific NDFD grid area. Default is to find the
+                    smallest grid the supplied coordinates lie in.
+
+    Returns:
+        dict: Weather analysis
+    """
+
     if area is None:
         area = get_smallest_grid(lat, lon)
     validate_arguments("wx", area, time_step, min_time, max_time)

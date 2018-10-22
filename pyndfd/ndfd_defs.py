@@ -458,6 +458,15 @@ GRID_VARS = {
 
 
 def ndfd_defs():
+    """
+    Return the NDFD Definition varaibles
+
+    Args:
+        None
+
+    Returns:
+        dict: Dictionary of all the NDFD Definition variables defined in ndfd_defs.py
+    """
     return {"vars": NDFD_VARS, "wx": WX_VARS, "wwa": WWA_VARS, "grids": GRID_VARS}
 
 
