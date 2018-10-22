@@ -461,6 +461,5 @@ def ndfd_defs():
     return {"vars": NDFD_VARS, "wx": WX_VARS, "wwa": WWA_VARS, "grids": GRID_VARS}
 
 
-# TODO: Remove deprecated names
-# Keep deprecated function name for now
+# TODO: Remove deprecated function names in a future version
 ndfdDefs = deprecate_func("ndfdDefs", ndfd_defs)

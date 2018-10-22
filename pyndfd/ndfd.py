@@ -90,8 +90,6 @@ def set_local_cache_server(uri):
     NDFD_LOCAL_SERVER = uri
 
 
-setLocalCacheServer = deprecate_func("setLocalCacheServer", set_local_cache_server)
-
 """
 
   Function: std_dev
@@ -110,8 +108,6 @@ def std_dev(vals):
     variance = sum(squared) / len(squared)
     return sqrt(variance)
 
-
-stdDev = deprecate_func("stdDev", std_dev)
 
 """
 
@@ -148,10 +144,6 @@ def get_latest_forecast_time():
         latest_time = datetime.utcnow() - timedelta(hours=1)
     return latest_time.replace(minute=0, second=0, microsecond=0)
 
-
-getLatesdtForecastTime = deprecate_func(
-    "getLatestForecastTime", get_latest_forecast_time
-)
 
 """
 
@@ -202,8 +194,6 @@ def get_variable(var, area):
     return gribs
 
 
-getVariable = deprecate_func("getVariable", get_variable)
-
 """
 
   Function: get_elevation_variable
@@ -247,8 +237,6 @@ def get_elevation_variable(area):
     return local_var
 
 
-getElevationVariable = deprecate_func("getElevationVariable", get_elevation_variable)
-
 """
 
   Function: get_smallest_grid
@@ -280,8 +268,6 @@ def get_smallest_grid(lat, lon):
 
     return smallest
 
-
-getSmallestGrid = deprecate_func("getSmallestGrid", get_smallest_grid)
 
 """
 
@@ -328,8 +314,6 @@ def get_nearest_grid_point(grb, lat, lon, projparams=None):
     return x, y, grid_x, grid_y, g_lat, g_lon
 
 
-getNearestGridPoint = deprecate_func("getNearestGridPoint", get_nearest_grid_point)
-
 """
 
   Function: validate_arguments
@@ -368,8 +352,6 @@ def validate_arguments(var, area, time_step, min_time, max_time):
     if not valid_var:
         raise ValueError("Variable not available in area: " + area)
 
-
-validateArguments = deprecate_func("validateArguments", validate_arguments)
 
 """
 
@@ -542,8 +524,6 @@ def get_forecast_analysis(
     return analysis
 
 
-getForecastAnalysis = deprecate_func("getForecastAnalysis", get_forecast_analysis)
-
 """
 
   Function: unpack_string
@@ -580,8 +560,6 @@ def unpack_string(raw):
 
     return codes
 
-
-unpackString = deprecate_func("unpackString", unpack_string)
 
 """
 
@@ -691,8 +669,6 @@ def parse_weather_string(wx_string):
     return weather_string, visibility
 
 
-parseWeatherString = deprecate_func("parseWeatherString", parse_weather_string)
-
 """
 
   Function: parse_advisory_string
@@ -736,8 +712,6 @@ def parse_advisory_string(wwa_string):
 
     return advisory_string
 
-
-parse_advisory_string = deprecate_func("parseAdvisoryString", parse_advisory_string)
 
 """
 
@@ -875,4 +849,20 @@ def get_weather_analysis(
     return analysis
 
 
+# TODO: Remove deprecated function names in a future version
+setLocalCacheServer = deprecate_func("setLocalCacheServer", set_local_cache_server)
+stdDev = deprecate_func("stdDev", std_dev)
+getLatestForecastTime = deprecate_func(
+    "getLatestForecastTime",
+    get_latest_forecast_time
+)
+getVariable = deprecate_func("getVariable", get_variable)
+getElevationVariable = deprecate_func("getElevationVariable", get_elevation_variable)
+getSmallestGrid = deprecate_func("getSmallestGrid", get_smallest_grid)
+getNearestGridPoint = deprecate_func("getNearestGridPoint", get_nearest_grid_point)
+validateArguments = deprecate_func("validateArguments", validate_arguments)
+getForecastAnalysis = deprecate_func("getForecastAnalysis", get_forecast_analysis)
+unpackString = deprecate_func("unpackString", unpack_string)
+parseWeatherString = deprecate_func("parseWeatherString", parse_weather_string)
+parse_advisory_string = deprecate_func("parseAdvisoryString", parse_advisory_string)
 getWeatherAnalysis = deprecate_func("getWeatherAnalysis", get_weather_analysis)
